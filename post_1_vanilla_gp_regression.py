@@ -21,10 +21,13 @@ class RBFGaussianProcessModel:
         self.lengthscale = lengthscale
         self.device = device
 
+    def constraint(self, x):
+        return torch.tanh(x)
+
     def model(self):
-        # The design is a pyro.param that is tanh transformer to [-1, 1]^{dim}
+        # The design is a pyro.param that is transformed to [-1, 1]^{dim}
         design = pyro.param("design", torch.empty([self.batch_size, self.dim], device=self.device).normal_())
-        design = torch.tanh(design)
+        design = self.constraint(design)
 
         # Evaluate the RBF kernel between each design point in the batch design
         cov = torch.exp(-(design.unsqueeze(-3) - design.unsqueeze(-2)).pow(2).sum(-1) / (2 * self.lengthscale ** 2))
@@ -45,9 +48,9 @@ def single_run(seed, num_steps=20000):
     pyro.set_rng_seed(seed)
 
     pce_loss = PriorContrastiveEstimation(10, 100)
-    gp_model = RBFGaussianProcessModel(batch_size=12, device="cpu")
+    gp_model = RBFGaussianProcessModel(batch_size=9, device="cpu")
 
-    optimizer = pyro.optim.Adam(optim_args={"lr": 0.001, "weight_decay": 0})
+    optimizer = pyro.optim.Adam(optim_args={"lr": 0.003, "weight_decay": 0, "betas": (0.5, 0.9)})
     oed = OED(gp_model.model, optimizer, pce_loss)
 
     loss_history = []
@@ -60,14 +63,16 @@ def single_run(seed, num_steps=20000):
         t.set_description("Loss: {:.3f} ".format(loss))
         loss_history.append(loss)
         if i % 2000 == 1:
-            d = np.tanh(pyro.param("design").cpu().detach().numpy())
+            d = gp_model.constraint(pyro.param("design")).cpu().detach().numpy()
             plt.scatter(d[:, 0], d[:, 1])
+            plt.axis("scaled")
             plt.savefig(f"design_{i}.png")
             plt.close()
 
     # Make some additional plots
-    d = np.tanh(pyro.param("design").cpu().detach().numpy())
+    d = gp_model.constraint(pyro.param("design").cpu().detach())
     plt.scatter(d[:, 0], d[:, 1])
+    plt.axis("scaled")
     plt.savefig("design_end.png")
     plt.close()
 
@@ -76,6 +81,19 @@ def single_run(seed, num_steps=20000):
     plt.ylabel("log(L+1) - PCE")
     plt.savefig("loss_history.png")
     plt.close()
+
+    # Plot the predictive variance surface after acquisition
+    sigma22 = torch.exp(-(d.unsqueeze(-3) - d.unsqueeze(-2)).pow(2).sum(-1) / (2 * gp_model.lengthscale ** 2))
+    grid = torch.stack(torch.meshgrid(torch.linspace(-1, 1, 40), torch.linspace(-1, 1, 40), indexing="ij"), axis=-1)
+    sigma12 = torch.exp(-(d.unsqueeze(-3) - grid.unsqueeze(-2)).pow(2).sum(-1) / (2 * gp_model.lengthscale ** 2))
+    sigma22invsigma12 = torch.linalg.solve(sigma22, sigma12.unsqueeze(-1)).squeeze(-1)
+    grid_var = 1 - (sigma12 * sigma22invsigma12).sum(-1)
+    
+    plt.pcolormesh(grid[..., 0].numpy(), grid[..., 1].numpy(), grid_var.numpy(), shading="nearest", cmap="summer")
+    plt.colorbar()
+    plt.scatter(d[:, 0], d[:, 1], c="#900010", marker="*")
+    plt.axis("scaled")
+    plt.savefig("variance_heatmap.png")
 
 
 if __name__ == "__main__":
