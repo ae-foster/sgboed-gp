@@ -1,13 +1,12 @@
 # Stochastic-gradient Bayesian Optimal Experimental Design with Gaussian Processes
 
 This is a standalone repo containing the code for the blogs posts:
-0. [Stochastic-gradient Bayesian Optimal Experimental Design with Gaussian Processes](url.tbd.com)
+
+1. [Stochastic-gradient Bayesian Optimal Experimental Design with Gaussian Processes](url.tbd.com)
 
 
 ## Environment set-up
-The `environment.yml` files contains the specifications for the environment that I used, which uses CUDA=11.8.
-
-Alternatively, you can create an environment on a different platform via
+You can create an environment to run this code using
 
 ```bash
 conda create -n sgboed python=3.11

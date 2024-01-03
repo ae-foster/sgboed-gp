@@ -48,7 +48,7 @@ def single_run(seed, num_steps=20000):
     pyro.set_rng_seed(seed)
 
     pce_loss = PriorContrastiveEstimation(10, 100)
-    gp_model = RBFGaussianProcessModel(batch_size=9, device="cpu")
+    gp_model = RBFGaussianProcessModel(batch_size=9, device="cpu")  # small tensors may be faster on CPU
 
     optimizer = pyro.optim.Adam(optim_args={"lr": 0.003, "weight_decay": 0, "betas": (0.5, 0.9)})
     oed = OED(gp_model.model, optimizer, pce_loss)
