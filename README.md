@@ -2,7 +2,7 @@
 
 This is a standalone repo containing the code for the blogs posts:
 
-1. [Stochastic-gradient Bayesian Optimal Experimental Design with Gaussian Processes](url.tbd.com)
+1. [Stochastic-gradient Bayesian Optimal Experimental Design with Gaussian Processes](https://ae-foster.github.io/posts/2024/01/03/sgboed-gp-conceptual.html)
 
 
 ## Environment set-up
