@@ -36,9 +36,13 @@ class RBFGaussianProcessModel:
 
         # The `latent_sample` instruction overrides pyro.sample and tags the sample as a model latent
         means = latent_sample("means", dist.MultivariateNormal(torch.zeros(self.batch_size, device=self.device), cov))
-        # The `observation_sample` instruction similarly adds a tag to this sample state for an experimental outcome
+        # The `observation_sample` instruction similarly adds a tag to this sample site for an experimental outcome
         # The observation variance is set to 1.0
+
         # The `.to_event(1)` tells Pyro that y is vector of dimension `self.batch_size`
+        # By adding `.to_event(1)`, when Pyro computes the conditional log-likelihood of y, it sums over the individual
+        #  batch components of `y`, which is correct, rather than returning a separate log-likelihood for each
+        #  component of `y`, which would give an incorrectly shaped likelihood tensor
         y = observation_sample("y", dist.Normal(means, 1.0).to_event(1))
         return y
 
